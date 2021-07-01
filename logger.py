@@ -1,15 +1,11 @@
 import logging
-import os
 
 loggers = {}
 
 
-def setup_custom_logger(name='arbitrage', log_level=logging.DEBUG):
+def setup_custom_logger(name='exchange_test', log_level=logging.DEBUG):
     if loggers.get(name):
         return loggers[name]
-
-    if not os.path.exists('./logs'):
-        os.mkdir('logs')
 
     logger = logging.getLogger(name)
     loggers[name] = logger

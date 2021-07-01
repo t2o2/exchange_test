@@ -50,17 +50,3 @@ def get_kraken_signature(urlpath, data, secret):
     sigdigest = base64.b64encode(mac.digest())
     return sigdigest.decode()
 
-
-
-if __name__ == '__main__':
-    #print(query_trade_id('OQCLML-BW3P3-BUCMWZ'))
-    resp = kraken_request('/0/private/QueryOrders', {
-        "nonce": str(int(1000 * time.time())),
-        #"txid": "TUKCR7-PUQT3-VIKQUH"
-        "txid": "OJXW3S-UOER3-7MAO6W"
-    }, api_key, api_sec)
-
-    print(resp.text)
-
-    #resp = requests.get('https://api.kraken.com/0/public/Ticker?pair=XETHZEUR')
-    #print(resp.json())
