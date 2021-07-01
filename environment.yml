@@ -1,0 +1,9 @@
+name: kraken_test
+
+dependencies:
+  - python=3.9
+  - pandas
+  - aiohttp
+  - requests
+  - pip:
+      - ratelimit
