@@ -32,6 +32,7 @@ def format_to_output(order: Dict) -> Dict:
 
 
 def export_trade_info(order_df: pd.DataFrame, trade_info: dict):
+    logger.info('Cleaning order')
     exported_orders = set()
     cleaned_orders = []
     for _, order in order_df.iterrows():
@@ -40,18 +41,17 @@ def export_trade_info(order_df: pd.DataFrame, trade_info: dict):
         formatted_trade = format_to_output(trade_info[order.ordertxid])
         cleaned_orders.append(formatted_trade)
         exported_orders.add(order.ordertxid)
+    logger.info('Exporting to output file')
     pd.DataFrame(cleaned_orders).sort_values('time', ascending=False).to_csv('reconciled_trades.csv')
 
 
 def clean_order_info(ex: IExchange, order_df: pd.DataFrame) -> dict:
+    unique_list = order_df['ordertxid'].unique().tolist()
+    logger.info(f'Retrieving trade Ids: {unique_list}')
+    rsp = ex.query_order_id_batch(unique_list)
     trade_info = {}
-    for i, order in order_df.iterrows():
-        if order.ordertxid in trade_info:
-            continue
-        logger.info(f'Retrieving trade Id: {order.ordertxid}')
-        rsp = ex.query_order_id(order.ordertxid)
-        trade_info[order.ordertxid] = {'txid': order.ordertxid, **(rsp['result'][order.ordertxid])}
-        logger.info(rsp)
+    for k, v in rsp.items():
+        trade_info[k] = {'txid': k, **v}
     return trade_info
 
 
