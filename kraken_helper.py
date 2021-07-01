@@ -4,12 +4,22 @@ import hmac
 import requests
 import time
 import urllib.parse
+from exceptions import *
 from interfaces.i_exchange import IExchange
-from ratelimit import limits, sleep_and_retry
 from logger import setup_custom_logger
+from ratelimit import limits, sleep_and_retry
+from typing import List
 
 
 logger = setup_custom_logger()
+
+
+def order_feeder(orders: List):
+    idx = 0
+    step = 20
+    while idx < len(orders):
+        yield orders[idx:idx+step]
+        idx += step
 
 
 class KrakenExchange(IExchange):
@@ -32,13 +42,28 @@ class KrakenExchange(IExchange):
         rsp = requests.post((self.api_url + uri_path), headers=headers, data=data)
         return rsp
 
+    def _query_private(self, endpoint, data):
+        response = self.kraken_request(endpoint, data, self.api_key, self.api_sec)
+        rsp = response.json()
+        if len(rsp['error']) > 0:
+            raise ExchangeResponseError(rsp['error'])
+        return rsp['result']
+
     def query_order_id(self, trade_id: str):
-        # Construct the request and print the result
-        rsp = self.kraken_request('/0/private/QueryOrders', {
-            "nonce": str(int(1000*time.time())),
+        return self._query_private('/0/private/QueryOrders', {
+            "nonce": str(int(1000 * time.time())),
             "txid": trade_id
-        }, self.api_key, self.api_sec)
-        return rsp.json()
+        })
+
+    def query_order_id_batch(self, order_ids: List[str]):
+        rslt = {}
+        for order_batch in order_feeder(order_ids):
+            rsp = self._query_private('/0/private/QueryOrders', {
+                "nonce": str(int(1000 * time.time())),
+                "txid": ','.join(order_batch)
+            })
+            rslt = {**rslt, **rsp}
+        return rslt
 
 
 def get_kraken_signature(urlpath, data, secret):
