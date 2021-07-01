@@ -1,10 +1,21 @@
-from kraken_helper import query_trade_id, query_order_id
+from kraken_helper import KrakenExchange
+from interfaces.i_exchange import IExchange
 from logger import setup_custom_logger
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import pandas as pd
+import json
 
 
 logger = setup_custom_logger()
+
+
+def load_credentials() -> (str, str):
+    with open('credential_own.json', 'r') as f:
+        credential = json.load(f)
+
+    api_key = credential['key']
+    api_sec = credential['secret']
+    return api_key, api_sec
 
 
 def calculate_exposure(fname: str) -> Dict[str, float]:
@@ -22,13 +33,10 @@ def calculate_exposure(fname: str) -> Dict[str, float]:
     logger.info(exposure)
     return exposure
 
-exposure_dict = calculate_exposure('data/kraken_tradefile.csv')
-pd.DataFrame([exposure_dict]).to_csv('exposure.csv', index=False)
 
-
-def validate_orders(fname: str):
+def validate_orders(ex: KrakenExchange, fname: str):
     order_df = pd.read_csv(fname)
-    trade_info = clean_order_info(order_df)
+    trade_info = clean_order_info(ex, order_df)
     export_trade_info(order_df, trade_info)
 
 
@@ -60,17 +68,26 @@ def export_trade_info(order_df: pd.DataFrame, trade_info: dict):
     pd.DataFrame(cleaned_orders).sort_values('time', ascending=False).to_csv('reconciled_trades.csv')
 
 
-def clean_order_info(order_df: pd.DataFrame) -> dict:
+def clean_order_info(ex: IExchange, order_df: pd.DataFrame) -> dict:
     trade_info = {}
     for i, order in order_df.iterrows():
         if order.ordertxid in trade_info:
             continue
         logger.info(f'Trade Id: {order.ordertxid}')
-        rsp = query_order_id(order.ordertxid)
+        rsp = ex.query_order_id(order.ordertxid)
         trade_info[order.ordertxid] = {'txid': order.ordertxid, **(rsp['result'][order.ordertxid])}
         logger.info(rsp)
     return trade_info
 
-validate_orders('data/kraken_tradefile1.csv')
-#validate_trade('data/kraken_tradefile_mini.csv')
 
+def main():
+    exposure_dict = calculate_exposure('data/kraken_tradefile.csv')
+    pd.DataFrame([exposure_dict]).to_csv('exposure.csv', index=False)
+
+    api_key, api_sec = load_credentials()
+    ex = KrakenExchange(key=api_key, secret=api_sec)
+    validate_orders(ex, 'data/kraken_tradefile1.csv')
+
+
+if __name__ == '__main__':
+    main()
