@@ -1,5 +1,5 @@
 from interfaces.i_exchange import IExchange
-from kraken_helper import KrakenExchange
+from exchange_kraken import KrakenExchange
 from logger import setup_custom_logger
 from pathlib import Path
 from typing import Dict
@@ -32,11 +32,11 @@ def format_to_output(order: Dict) -> Dict:
 
 
 def export_trade_info(order_df: pd.DataFrame, trade_info: dict):
-    logger.info('Cleaning order')
+    logger.info('Cleaning orders')
     exported_orders = set()
     cleaned_orders = []
     for _, order in order_df.iterrows():
-        if order.ordertxid in exported_orders:
+        if order.ordertxid in exported_orders or order.ordertxid not in trade_info:
             continue
         formatted_trade = format_to_output(trade_info[order.ordertxid])
         cleaned_orders.append(formatted_trade)

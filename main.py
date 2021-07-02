@@ -1,10 +1,11 @@
 from actions.exposure import calculate_exposure
 from actions.reconcile import validate_orders
 from exceptions import UserInputError
-from kraken_helper import KrakenExchange
+from exchange_kraken import KrakenExchange
 from logger import setup_custom_logger
 from pathlib import Path
 import argparse
+import os
 import pandas as pd
 import json
 
@@ -13,16 +14,22 @@ logger = setup_custom_logger()
 
 
 def load_credentials() -> (str, str):
+    logger.info('Loading credentials')
     with open('credential_own.json', 'r') as f:
         credential = json.load(f)
 
-    api_key = credential['key']
-    api_sec = credential['secret']
+    if 'API_KEY' in os.environ:
+        logger.info('Environment key used')
+    if 'API_SECRET' in os.environ:
+        logger.info('Environment secret used')
+    api_key = os.environ.get('API_KEY', credential['key'])
+    api_sec = os.environ.get('API_SECRET', credential['secret'])
     return api_key, api_sec
 
 
 def action_calc_exposure(fpath: Path):
     exposure_dict = calculate_exposure(fpath)
+    logger.info('Exporting to output csv file')
     pd.DataFrame([exposure_dict]).to_csv('exposure.csv', index=False)
 
 
@@ -33,6 +40,7 @@ def action_reconcile(fpath: Path):
 
 
 def perform_action(action_name: str, fpath: Path):
+    logger.info(f'Performing action: {action_name}')
     action_map = {
         'calculateExposure': action_calc_exposure,
         'reconcile': action_reconcile
